@@ -5,6 +5,8 @@ import subprocess
 from PyQt5.QtWidgets import QMainWindow, QFileDialog, QMessageBox
 from PyQt5.QtCore import QDate, QDateTime
 from colorama import Fore, Style
+
+from AsyncProcessPack import AsyncProcess
 from g_gspread import get_worksheet_by_title, get_sheet_data_by_title, create_worksheet
 from save_data import save_json, get_json_data_from_file
 
@@ -43,6 +45,12 @@ class MainWindow(QMainWindow, design.Ui_MainWindow):
         self.selectFileButton.clicked.connect(self._select_file_path)
         self.clearButton.clicked.connect(self._clear_bt_click)
         self.copyButton.clicked.connect(self._copy_bt_click)
+        self.lineEditStatus.setText("не запущен")
+        self.results = {
+            'дду': self.lineEditDduInfo,
+            'ипотека': self.lineEditIpInfo,
+            'уступки': self.lineEditUInfo,
+        }
 
     def _clear_bt_click(self):
         self.lineEditUrl.setText('')
@@ -115,12 +123,17 @@ class MainWindow(QMainWindow, design.Ui_MainWindow):
         append_to.append(row)
 
     def _start_click(self):
+        AsyncProcess("status", self._set_status, 1, (self, "_pars_data"))
+
+    def _pars_data(self):
         self.ddu_list, self.i_list, self.u_list = [], [], []
         # check file path
         xml_file = self._get_xml_file()
         if xml_file is None:
+            self.lineEditStatus.setText('не запущен')
             return
         self._save_app_setup()
+        self.ss_url = self.lineEditUrl.text()
         start_date = self.dateEdit_from.date()
         end_date = self.dateEdit_to.date()
         # create element tree object
@@ -253,6 +266,7 @@ class MainWindow(QMainWindow, design.Ui_MainWindow):
             'уступки': self.u_list,
         }
         self.insert_sheet_data(data)
+        self.lineEditStatus.setText('не запущен')
 
     def insert_sheet_data(self, data):
         for key, new_data in data.items():
@@ -262,6 +276,7 @@ class MainWindow(QMainWindow, design.Ui_MainWindow):
                 # check duplicate rows
                 if len(sheet_data) > 0:
                     new_data = self.np_check(new_data, sheet_data)
+                self.results[key].setText(f"+{len(new_data)}")
                 new_data.extend(sheet_data)
                 new_data.insert(0, HEADERS[key])
                 print_info_msg(f"new data count: {len(new_data)}")
@@ -319,3 +334,8 @@ class MainWindow(QMainWindow, design.Ui_MainWindow):
         matches = re.findall(r"[-\w]{25,}", url)
         uid = matches[0]
         return uid
+
+    def _set_status(self):
+        for key, result in self.results.items():
+            result.setText("0")
+        self.lineEditStatus.setText('запущен')
