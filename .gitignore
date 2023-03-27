@@ -1,0 +1,15 @@
+venv
+text_files
+result data
+dist
+build
+*.spec
+*.log
+*.json
+.credentials
+.encrypted
+html
+.env
+*.key
+chromedriver
+Downloads
